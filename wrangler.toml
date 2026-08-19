@@ -1,5 +1,10 @@
 name = "kara-ai"
+main = "worker.js"
 compatibility_date = "2026-08-19"
 
 [assets]
 directory = "."
+binding = "ASSETS"
+
+[ai]
+binding = "AI"
