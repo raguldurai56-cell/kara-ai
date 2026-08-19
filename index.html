@@ -2,54 +2,218 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KARA AI</title>
+
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
-body{min-height:100vh;background:radial-gradient(circle at top,#17132d,#050507 65%);color:#fff;display:flex;justify-content:center}
-.app{width:100%;max-width:500px;min-height:100vh;padding:35px 20px;display:flex;flex-direction:column}
-.logo{text-align:center;margin-top:60px}
-.logo-icon{width:80px;height:80px;margin:auto;border-radius:25px;background:linear-gradient(135deg,#00eaff,#8b5cf6,#ff3cac);display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:bold;box-shadow:0 0 40px #7c3cff66}
-h1{margin-top:20px;font-size:38px;letter-spacing:3px}.tagline{margin-top:8px;color:#aaa;font-size:14px;letter-spacing:2px}
-.welcome{text-align:center;margin-top:100px}.welcome h2{font-size:26px;margin-bottom:10px}.welcome p{color:#888}
-.search-box{margin-top:30px;background:#111116;border:1px solid #292933;border-radius:22px;padding:10px;display:flex;align-items:center;box-shadow:0 0 25px #000}
-.search-box input{flex:1;background:transparent;border:none;outline:none;color:white;font-size:16px;padding:14px}
-.search-box button{border:none;width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#00eaff,#8b5cf6);color:white;font-size:20px;cursor:pointer}
-.result{margin-top:20px;padding:18px;border-radius:18px;background:#101016;border:1px solid #272733;display:none;line-height:1.6}
-footer{margin-top:auto;text-align:center;color:#555;font-size:12px;padding-top:30px}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #17132d, #050507 65%);
+  color: white;
+  display: flex;
+  justify-content: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 600px;
+  min-height: 100vh;
+  padding: 35px 20px 25px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  text-align: center;
+  margin-top: 60px;
+}
+
+.logo-icon {
+  width: 80px;
+  height: 80px;
+  margin: auto;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #00eaff, #8b5cf6, #ff3cac);
+  box-shadow: 0 0 35px rgba(139, 92, 246, 0.45);
+}
+
+h1 {
+  margin-top: 20px;
+  font-size: 38px;
+  letter-spacing: 3px;
+}
+
+.tagline {
+  margin-top: 8px;
+  color: #aaa;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.welcome {
+  text-align: center;
+  margin-top: 100px;
+}
+
+.welcome h2 {
+  font-size: 30px;
+  margin-bottom: 12px;
+}
+
+.welcome p {
+  color: #888;
+  font-size: 17px;
+}
+
+.chat {
+  margin-top: 35px;
+}
+
+.input-box {
+  display: flex;
+  align-items: center;
+  background: #111116;
+  border: 1px solid #292933;
+  border-radius: 28px;
+  padding: 8px 10px 8px 18px;
+}
+
+.input-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 16px;
+  padding: 14px 5px;
+}
+
+.input-box input::placeholder {
+  color: #777;
+}
+
+.send {
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 18px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #00eaff, #8b5cf6);
+  color: white;
+  font-size: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result {
+  display: none;
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #101016;
+  border: 1px solid #272733;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.status {
+  color: #aaa;
+}
+
+footer {
+  margin-top: auto;
+  padding-top: 30px;
+  text-align: center;
+  color: #555;
+  font-size: 12px;
+}
 </style>
 </head>
+
 <body>
+
 <div class="app">
-<div class="logo"><div class="logo-icon">K</div><h1>KARA AI</h1><div class="tagline">THINK • TALK • SOLVE</div></div>
-<div class="welcome"><h2>How can I help you?</h2><p>Ask KARA anything...</p>
-<div class="search-box">
-  <input
-    id="question"
-    type="text"
-    placeholder="Ask KARA..."
-    onkeydown="if(event.key==='Enter') askKara()"
-  />
-  <button type="button" onclick="askKara()">➤</button>
+
+  <div class="logo">
+    <div class="logo-icon">K</div>
+    <h1>KARA AI</h1>
+    <div class="tagline">THINK · TALK · SOLVE</div>
+  </div>
+
+  <div class="welcome">
+    <h2>How can I help you?</h2>
+    <p>Ask KARA anything...</p>
+  </div>
+
+  <div class="chat">
+
+    <div class="input-box">
+      <input
+        id="question"
+        type="text"
+        placeholder="Ask KARA..."
+        autocomplete="off"
+      >
+
+      <button class="send" id="sendButton" onclick="askKara()">
+        ➤
+      </button>
+    </div>
+
+    <div class="result" id="result"></div>
+
+  </div>
+
+  <footer>
+    KARA AI · Your AI Assistant
+  </footer>
+
 </div>
-  <script>
+
+<script>
+let chatHistory = [];
+
+async function askKara() {
+
   const input = document.getElementById("question");
   const result = document.getElementById("result");
+  const button = document.getElementById("sendButton");
+
   const message = input.value.trim();
 
   if (!message) return;
 
   result.style.display = "block";
-  result.innerHTML = "🤖 KARA is thinking...";
+  result.innerHTML = '<span class="status">🤖 KARA is thinking...</span>';
+
+  button.disabled = true;
+  input.disabled = true;
 
   try {
+
     const response = await fetch("/api/chat", {
       method: "POST",
+
       headers: {
         "Content-Type": "application/json"
       },
+
       body: JSON.stringify({
-        message: message
+        message: message,
         history: chatHistory
       })
     });
@@ -57,25 +221,47 @@ footer{margin-top:auto;text-align:center;color:#555;font-size:12px;padding-top:3
     const data = await response.json();
 
     if (data.reply) {
-      result.innerHTML = "<b>🤖 KARA:</b><br><br>" + escapeHTML(data.reply);
+
+      result.textContent = "🤖 KARA:\n\n" + data.reply;
+
+      chatHistory.push({
+        role: "user",
+        content: message
+      });
+
+      chatHistory.push({
+        role: "assistant",
+        content: data.reply
+      });
+
     } else {
-      result.innerHTML = "❌ KARA brain error";
+
+      result.textContent =
+        "❌ KARA brain error\n\n" +
+        (data.error || "No response received.");
+
     }
 
   } catch (error) {
-    result.innerHTML = "❌ Connection error. Try again.";
+
+    result.textContent =
+      "❌ Connection error.\n\nPlease try again.";
+
   }
+
+  button.disabled = false;
+  input.disabled = false;
+  input.focus();
 }
 
-function escapeHTML(text) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-    .replace(/\n/g, "<br>");
-}
+document.getElementById("question").addEventListener("keydown", function(event) {
+
+  if (event.key === "Enter") {
+    askKara();
+  }
+
+});
 </script>
+
 </body>
 </html>
