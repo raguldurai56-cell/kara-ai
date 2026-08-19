@@ -28,6 +28,7 @@ footer{margin-top:auto;text-align:center;color:#555;font-size:12px;padding-top:3
 <footer>KARA AI V2 • Your AI Assistant</footer>
 </div>
 <script>
+  let chatHistory = [];
 async function askKara() {
   const input = document.getElementById("question");
   const result = document.getElementById("result");
@@ -46,6 +47,7 @@ async function askKara() {
       },
       body: JSON.stringify({
         message: message
+        history: chatHistory
       })
     });
 
