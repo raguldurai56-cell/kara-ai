@@ -28,8 +28,49 @@ footer{margin-top:auto;text-align:center;color:#555;font-size:12px;padding-top:3
 <footer>KARA AI V2 • Your AI Assistant</footer>
 </div>
 <script>
-function askKara(){const input=document.getElementById("question"),result=document.getElementById("result"),q=input.value.trim();result.style.display="block";result.innerHTML=q?"🤖 <b>KARA:</b><br><br>You asked: <b>"+escapeHTML(q)+"</b><br><br>I'm ready! 🚀 AI brain connection will be added next.":"⚡ Type something first!"}
-function escapeHTML(t){return t.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+async function askKara() {
+  const input = document.getElementById("question");
+  const result = document.getElementById("result");
+  const message = input.value.trim();
+
+  if (!message) return;
+
+  result.style.display = "block";
+  result.innerHTML = "🤖 KARA is thinking...";
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: message
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.reply) {
+      result.innerHTML = "<b>🤖 KARA:</b><br><br>" + escapeHTML(data.reply);
+    } else {
+      result.innerHTML = "❌ KARA brain error";
+    }
+
+  } catch (error) {
+    result.innerHTML = "❌ Connection error. Try again.";
+  }
+}
+
+function escapeHTML(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+    .replace(/\n/g, "<br>");
+}
 </script>
 </body>
 </html>
