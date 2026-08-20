@@ -40,25 +40,24 @@ export default {
           .trim();
 
         // Only allow numbers and basic math operators
-        const looksLikeMath =
-          /^[0-9+\-*/().%\s]+$/.test(mathText) &&
-          /[+\-*/%]/.test(mathText) &&
-          /\d/.test(mathText);
-
+       const looksLikeMath =
+  /^[0-9+\-*/().%\s]+$/.test(mathText) &&
+  /[+\-*/%]/.test(mathText) &&
+  /\d/.test(mathText);
         if (looksLikeMath) {
-          try {
-            const result = Function(
-              `"use strict"; return (${mathText})`
-            )();
+  try {
+    const result = Function(
+      `"use strict"; return (${mathText})`
+    )();
 
-            if (Number.isFinite(result)) {
-              return Response.json({
-                reply: String(result)
-              });
-            }
-          } catch (error) {
-            // If it is not valid math, continue to AI
-          }
+    if (typeof result === "number" && Number.isFinite(result)) {
+      return Response.json({
+        reply: String(result)
+      });
+    }
+  } catch (error) {
+    // Continue to AI
+  }
         }
 
         // ==========================================
