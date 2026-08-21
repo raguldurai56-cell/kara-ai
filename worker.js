@@ -1,6 +1,4 @@
-
 const CHAT_MODEL = "gemini-3.6-flash";
-const IMAGE_MODEL = "@cf/black-forest-labs/flux-1-schnell";
 
 export default {
   async fetch(request, env) {
@@ -18,15 +16,13 @@ export default {
     // =========================
     // KARA AI CHAT API
     // =========================
-    if (
-      url.pathname === "/api/chat" &&
-      request.method === "POST"
-    ) {
+    if (url.pathname === "/api/chat" && request.method === "POST") {
       try {
         const body = await request.json();
 
-        const message =
-          String(body.message || "").trim();
+        const message = String(
+          body?.message || ""
+        ).trim();
 
         if (!message) {
           return json(
@@ -35,6 +31,7 @@ export default {
           );
         }
 
+        // Check API key
         if (!env.GEMINI_API_KEY) {
           return json(
             {
@@ -45,9 +42,11 @@ export default {
           );
         }
 
+        // Gemini API endpoint
         const endpoint =
           `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
+        // Gemini request
         const response = await fetch(endpoint, {
           method: "POST",
 
@@ -61,11 +60,14 @@ export default {
                 {
                   text:
                     "You are KARA AI, a helpful, friendly AI assistant. " +
-                    "Answer clearly and naturally. " +
-                    "If the user speaks Tamil or Tanglish, reply in the same style. " +
-                    "Talk like a close friendly Tamil friend when appropriate. " +
+                    "Your name is KARA AI. " +
                     "Do not claim to be ChatGPT. " +
-                    "Your name is KARA AI."
+                    "Answer clearly, naturally and accurately. " +
+                    "If the user speaks Tamil, reply in Tamil. " +
+                    "If the user speaks Tanglish, reply in Tanglish. " +
+                    "Talk like a close friendly Tamil friend when appropriate. " +
+                    "Keep answers useful and easy to understand. " +
+                    "For mathematical calculations, carefully calculate the answer before replying."
                 }
               ]
             },
@@ -86,20 +88,28 @@ export default {
 
         const data = await response.json();
 
+        // =========================
+        // GEMINI API ERROR
+        // =========================
         if (!response.ok) {
+          const apiError =
+            data?.error?.message ||
+            "Gemini API request failed.";
+
           return json(
             {
-              error:
-                data?.error?.message ||
-                "Gemini API request failed."
+              error: apiError
             },
             response.status
           );
         }
 
+        // =========================
+        // GET AI RESPONSE
+        // =========================
         const reply =
           data?.candidates?.[0]?.content?.parts
-            ?.map(part => part.text || "")
+            ?.map(part => part?.text || "")
             .join("")
             .trim();
 
@@ -114,14 +124,13 @@ export default {
         }
 
         return json({
-          reply
+          reply: reply
         });
 
       } catch (error) {
         return json(
           {
-            error:
-              "KARA AI server error.",
+            error: "KARA AI server error.",
             details:
               error?.message ||
               String(error)
@@ -132,87 +141,27 @@ export default {
     }
 
     // =========================
-    // KARA AI IMAGE API
+    // IMAGE API DISABLED
     // =========================
+    // Image generation is intentionally disabled
+    // because the Gemini image model does not have
+    // Gemini API Free Tier availability.
+
     if (
       url.pathname === "/api/image" &&
       request.method === "POST"
     ) {
-      try {
-        const body = await request.json();
-
-        const prompt =
-          String(body.prompt || "").trim();
-
-        if (!prompt) {
-          return json(
-            {
-              error:
-                "Image prompt empty."
-            },
-            400
-          );
-        }
-
-        // Cloudflare Workers AI
-        if (!env.AI) {
-          return json(
-            {
-              error:
-                "Cloudflare Workers AI binding is not configured."
-            },
-            500
-          );
-        }
-
-        const result = await env.AI.run(
-          IMAGE_MODEL,
-          {
-            prompt: prompt,
-
-            seed:
-              Math.floor(
-                Math.random() * 1000000000
-              ),
-
-            steps: 4
-          }
-        );
-
-        if (!result?.image) {
-          return json(
-            {
-              error:
-                "KARA AI image model did not return an image."
-            },
-            500
-          );
-        }
-
-        const image =
-          `data:image/jpeg;base64,${result.image}`;
-
-        return json({
-          image
-        });
-
-      } catch (error) {
-        return json(
-          {
-            error:
-              "KARA AI image generation failed.",
-
-            details:
-              error?.message ||
-              String(error)
-          },
-          500
-        );
-      }
+      return json(
+        {
+          error:
+            "Image generation is currently disabled in the ₹0 version of KARA AI."
+        },
+        403
+      );
     }
 
     // =========================
-    // KARA AI HOMEPAGE
+    // HOMEPAGE
     // =========================
     return new Response(
       HOME_PAGE,
@@ -220,7 +169,6 @@ export default {
         headers: {
           "Content-Type":
             "text/html; charset=UTF-8",
-
           ...corsHeaders()
         }
       }
@@ -231,19 +179,16 @@ export default {
 // =========================
 // JSON RESPONSE
 // =========================
-function json(
-  data,
-  status = 200
-) {
+
+function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
     {
-      status,
+      status: status,
 
       headers: {
         "Content-Type":
           "application/json",
-
         ...corsHeaders()
       }
     }
@@ -253,6 +198,7 @@ function json(
 // =========================
 // CORS HEADERS
 // =========================
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -266,9 +212,11 @@ function corsHeaders() {
 }
 
 // =========================
-// HOMEPAGE
+// KARA AI HOMEPAGE
 // =========================
+
 const HOME_PAGE = `<!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -288,222 +236,152 @@ const HOME_PAGE = `<!DOCTYPE html>
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
-
-      font-family:
-        Arial,
-        sans-serif;
-
-      background:
-        #0b0f19;
-
-      color:
-        white;
-
-      min-height:
-        100vh;
+      font-family: Arial, sans-serif;
+      background: #0b0f19;
+      color: white;
+      min-height: 100vh;
     }
 
     header {
-      padding:
-        18px;
-
-      text-align:
-        center;
-
-      font-size:
-        26px;
-
-      font-weight:
-        bold;
-
-      border-bottom:
-        1px solid #202737;
+      padding: 18px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: bold;
+      border-bottom: 1px solid #202737;
     }
 
     .container {
-      max-width:
-        800px;
-
-      margin:
-        auto;
-
-      padding:
-        20px;
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
     }
 
     #welcome {
-      text-align:
-        center;
-
-      margin-top:
-        70px;
+      text-align: center;
+      margin-top: 70px;
     }
 
     #welcome h1 {
-      font-size:
-        42px;
-
-      margin-bottom:
-        10px;
+      font-size: 42px;
+      margin-bottom: 10px;
     }
 
     #welcome p {
-      color:
-        #9ca3af;
+      color: #9ca3af;
+      font-size: 20px;
     }
 
     #chat {
-      margin-top:
-        30px;
-
-      padding-bottom:
-        100px;
+      margin-top: 30px;
+      padding-bottom: 100px;
     }
 
     .message {
-      padding:
-        14px 16px;
-
-      border-radius:
-        15px;
-
-      margin:
-        12px 0;
-
-      line-height:
-        1.5;
-
-      white-space:
-        pre-wrap;
-
-      overflow-wrap:
-        anywhere;
+      padding: 14px 16px;
+      border-radius: 15px;
+      margin: 12px 0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
 
     .user {
-      background:
-        #2563eb;
-
-      margin-left:
-        20%;
+      background: #2563eb;
+      margin-left: 20%;
     }
 
     .ai {
-      background:
-        #1f2937;
-
-      margin-right:
-        20%;
+      background: #1f2937;
+      margin-right: 20%;
     }
 
     .input-area {
-      position:
-        fixed;
-
-      left:
-        0;
-
-      right:
-        0;
-
-      bottom:
-        0;
-
-      background:
-        #111827;
-
-      border-top:
-        1px solid #202737;
-
-      padding:
-        12px;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #111827;
+      border-top: 1px solid #202737;
+      padding: 12px;
     }
 
     .input-box {
-      max-width:
-        800px;
-
-      margin:
-        auto;
-
-      display:
-        flex;
-
-      gap:
-        8px;
+      max-width: 800px;
+      margin: auto;
+      display: flex;
+      gap: 8px;
     }
 
     input {
-      flex:
-        1;
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #374151;
+      background: #0b0f19;
+      color: white;
+      outline: none;
+      font-size: 16px;
+    }
 
-      padding:
-        14px;
-
-      border-radius:
-        12px;
-
-      border:
-        1px solid #374151;
-
-      background:
-        #0b0f19;
-
-      color:
-        white;
-
-      outline:
-        none;
-
-      font-size:
-        16px;
+    input::placeholder {
+      color: #6b7280;
     }
 
     button {
-      padding:
-        14px 18px;
-
-      border:
-        none;
-
-      border-radius:
-        12px;
-
-      background:
-        #2563eb;
-
-      color:
-        white;
-
-      font-weight:
-        bold;
-
-      cursor:
-        pointer;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 12px;
+      background: #2563eb;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
     }
 
     button:hover {
-      opacity:
-        0.9;
+      opacity: 0.9;
     }
 
-    .generated-image {
-      width:
-        100%;
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
-      max-width:
-        600px;
+    @media (max-width: 600px) {
 
-      border-radius:
-        16px;
+      #welcome {
+        margin-top: 50px;
+      }
 
-      display:
-        block;
+      #welcome h1 {
+        font-size: 38px;
+      }
 
-      margin-top:
-        8px;
+      .user {
+        margin-left: 5%;
+      }
+
+      .ai {
+        margin-right: 5%;
+      }
+
+      .input-box {
+        gap: 6px;
+      }
+
+      input {
+        min-width: 0;
+      }
+
+      button {
+        padding: 14px;
+      }
     }
 
   </style>
@@ -520,9 +398,7 @@ const HOME_PAGE = `<!DOCTYPE html>
 
     <div id="welcome">
 
-      <h1>
-        KARA AI
-      </h1>
+      <h1>KARA AI</h1>
 
       <p>
         Your friendly AI assistant
@@ -546,6 +422,7 @@ const HOME_PAGE = `<!DOCTYPE html>
       >
 
       <button
+        id="sendButton"
         onclick="sendMessage()"
       >
         Send
@@ -558,47 +435,45 @@ const HOME_PAGE = `<!DOCTYPE html>
   <script>
 
     const input =
-      document.getElementById(
-        "message"
-      );
+      document.getElementById("message");
 
     const chat =
-      document.getElementById(
-        "chat"
-      );
+      document.getElementById("chat");
+
+    const sendButton =
+      document.getElementById("sendButton");
+
+    // =========================
+    // ENTER KEY
+    // =========================
 
     input.addEventListener(
       "keydown",
       function(event) {
 
-        if (
-          event.key === "Enter"
-        ) {
+        if (event.key === "Enter") {
+          event.preventDefault();
           sendMessage();
         }
 
       }
     );
 
-    function addMessage(
-      text,
-      type
-    ) {
+    // =========================
+    // ADD MESSAGE
+    // =========================
+
+    function addMessage(text, type) {
 
       const div =
-        document.createElement(
-          "div"
-        );
+        document.createElement("div");
 
       div.className =
         "message " + type;
 
-      div.textContent =
-        text;
+      div.textContent = text;
 
-      chat.appendChild(
-        div
-      );
+      chat.appendChild(div);
 
       window.scrollTo(
         0,
@@ -607,6 +482,10 @@ const HOME_PAGE = `<!DOCTYPE html>
 
       return div;
     }
+
+    // =========================
+    // SEND MESSAGE
+    // =========================
 
     async function sendMessage() {
 
@@ -619,156 +498,35 @@ const HOME_PAGE = `<!DOCTYPE html>
 
       input.value = "";
 
+      sendButton.disabled = true;
+
       addMessage(
         message,
         "user"
       );
 
-      const lowerMessage =
-        message.toLowerCase();
-
-      // =========================
-      // IMAGE REQUEST DETECTION
-      // =========================
-
-      const imageRequest =
-
-        lowerMessage.includes(
-          "generate an image"
-        ) ||
-
-        lowerMessage.includes(
-          "create an image"
-        ) ||
-
-        lowerMessage.includes(
-          "make an image"
-        ) ||
-
-        lowerMessage.includes(
-          "generate image"
-        ) ||
-
-        lowerMessage.includes(
-          "create image"
-        ) ||
-
-        lowerMessage.includes(
-          "draw an image"
-        ) ||
-
-        lowerMessage.includes(
-          "image of"
-        );
-
       const loading =
         addMessage(
-
-          imageRequest
-            ? "KARA AI is generating your image..."
-            : "KARA AI is thinking...",
-
+          "KARA AI is thinking...",
           "ai"
         );
 
       try {
 
-        // =========================
-        // IMAGE GENERATION
-        // =========================
-
-        if (imageRequest) {
-
-          const response =
-            await fetch(
-              "/api/image",
-              {
-                method:
-                  "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body:
-                  JSON.stringify({
-                    prompt:
-                      message
-                  })
-              }
-            );
-
-          const data =
-            await response.json();
-
-          if (!response.ok) {
-
-            loading.textContent =
-              data.error ||
-              "Image generation failed.";
-
-            return;
-          }
-
-          if (!data.image) {
-
-            loading.textContent =
-              "KARA AI did not return an image.";
-
-            return;
-          }
-
-          loading.textContent =
-            "";
-
-          const image =
-            document.createElement(
-              "img"
-            );
-
-          image.src =
-            data.image;
-
-          image.alt =
-            "Generated by KARA AI";
-
-          image.className =
-            "generated-image";
-
-          loading.appendChild(
-            image
-          );
-
-          window.scrollTo(
-            0,
-            document.body.scrollHeight
-          );
-
-          return;
-        }
-
-        // =========================
-        // NORMAL CHAT
-        // =========================
-
         const response =
           await fetch(
             "/api/chat",
             {
-              method:
-                "POST",
+              method: "POST",
 
               headers: {
                 "Content-Type":
                   "application/json"
               },
 
-              body:
-                JSON.stringify({
-                  message:
-                    message
-                })
+              body: JSON.stringify({
+                message: message
+              })
             }
           );
 
@@ -778,14 +536,14 @@ const HOME_PAGE = `<!DOCTYPE html>
         if (!response.ok) {
 
           loading.textContent =
-            data.error ||
+            data?.error ||
             "Something went wrong.";
 
           return;
         }
 
         loading.textContent =
-          data.reply ||
+          data?.reply ||
           "KARA AI did not return a response.";
 
       } catch (error) {
@@ -793,8 +551,13 @@ const HOME_PAGE = `<!DOCTYPE html>
         loading.textContent =
           "Connection error. Please try again.";
 
-      }
+      } finally {
 
+        sendButton.disabled = false;
+
+        input.focus();
+
+      }
     }
 
   </script>
