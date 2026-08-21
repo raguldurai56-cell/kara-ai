@@ -522,4 +522,4 @@ const HOME_PAGE = `<!DOCTYPE html>
 
 </body>
 
-</html>`
+</html>`;
