@@ -1,12 +1,14 @@
 
 const CHAT_MODEL = "gemini-3.6-flash";
-const IMAGE_MODEL = "gemini-3.1-flash-image";
+const IMAGE_MODEL = "@cf/black-forest-labs/flux-1-schnell";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS preflight
+    // =========================
+    // CORS PREFLIGHT
+    // =========================
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: corsHeaders()
@@ -16,18 +18,29 @@ export default {
     // =========================
     // KARA AI CHAT API
     // =========================
-    if (url.pathname === "/api/chat" && request.method === "POST") {
+    if (
+      url.pathname === "/api/chat" &&
+      request.method === "POST"
+    ) {
       try {
         const body = await request.json();
-        const message = String(body.message || "").trim();
+
+        const message =
+          String(body.message || "").trim();
 
         if (!message) {
-          return json({ error: "Message empty." }, 400);
+          return json(
+            { error: "Message empty." },
+            400
+          );
         }
 
         if (!env.GEMINI_API_KEY) {
           return json(
-            { error: "KARA AI API key is not configured." },
+            {
+              error:
+                "KARA AI API key is not configured."
+            },
             500
           );
         }
@@ -37,9 +50,11 @@ export default {
 
         const response = await fetch(endpoint, {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json"
           },
+
           body: JSON.stringify({
             system_instruction: {
               parts: [
@@ -49,13 +64,16 @@ export default {
                     "Answer clearly and naturally. " +
                     "If the user speaks Tamil or Tanglish, reply in the same style. " +
                     "Talk like a close friendly Tamil friend when appropriate. " +
-                    "Do not claim to be ChatGPT. Your name is KARA AI."
+                    "Do not claim to be ChatGPT. " +
+                    "Your name is KARA AI."
                 }
               ]
             },
+
             contents: [
               {
                 role: "user",
+
                 parts: [
                   {
                     text: message
@@ -87,17 +105,26 @@ export default {
 
         if (!reply) {
           return json(
-            { error: "KARA AI did not return a response." },
+            {
+              error:
+                "KARA AI did not return a response."
+            },
             500
           );
         }
 
-        return json({ reply });
+        return json({
+          reply
+        });
+
       } catch (error) {
         return json(
           {
-            error: "KARA AI server error.",
-            details: error?.message || String(error)
+            error:
+              "KARA AI server error.",
+            details:
+              error?.message ||
+              String(error)
           },
           500
         );
@@ -105,92 +132,79 @@ export default {
     }
 
     // =========================
-    // KARA AI IMAGE GENERATION
+    // KARA AI IMAGE API
     // =========================
-    if (url.pathname === "/api/image" && request.method === "POST") {
+    if (
+      url.pathname === "/api/image" &&
+      request.method === "POST"
+    ) {
       try {
         const body = await request.json();
-        const prompt = String(body.prompt || "").trim();
+
+        const prompt =
+          String(body.prompt || "").trim();
 
         if (!prompt) {
-          return json({ error: "Image prompt empty." }, 400);
-        }
-
-        if (!env.GEMINI_API_KEY) {
-          return json(
-            { error: "KARA AI API key is not configured." },
-            500
-          );
-        }
-
-        const endpoint =
-          `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: prompt
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseModalities: ["IMAGE"]
-            }
-          })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
           return json(
             {
               error:
-                data?.error?.message ||
-                "Image generation failed."
+                "Image prompt empty."
             },
-            response.status
+            400
           );
         }
 
-        const parts =
-          data?.candidates?.[0]?.content?.parts || [];
-
-        const imagePart = parts.find(
-          part => part?.inlineData?.data
-        );
-
-        if (!imagePart) {
+        // Cloudflare Workers AI
+        if (!env.AI) {
           return json(
             {
-              error: "KARA AI did not return an image."
+              error:
+                "Cloudflare Workers AI binding is not configured."
             },
             500
           );
         }
 
-        const mimeType =
-          imagePart.inlineData.mimeType || "image/png";
+        const result = await env.AI.run(
+          IMAGE_MODEL,
+          {
+            prompt: prompt,
+
+            seed:
+              Math.floor(
+                Math.random() * 1000000000
+              ),
+
+            steps: 4
+          }
+        );
+
+        if (!result?.image) {
+          return json(
+            {
+              error:
+                "KARA AI image model did not return an image."
+            },
+            500
+          );
+        }
 
         const image =
-          `data:${mimeType};base64,${imagePart.inlineData.data}`;
+          `data:image/jpeg;base64,${result.image}`;
 
         return json({
           image
         });
+
       } catch (error) {
         return json(
           {
-            error: "KARA AI image server error.",
-            details: error?.message || String(error)
+            error:
+              "KARA AI image generation failed.",
+
+            details:
+              error?.message ||
+              String(error)
           },
           500
         );
@@ -200,26 +214,40 @@ export default {
     // =========================
     // KARA AI HOMEPAGE
     // =========================
-    return new Response(HOME_PAGE, {
-      headers: {
-        "Content-Type": "text/html; charset=UTF-8",
-        ...corsHeaders()
+    return new Response(
+      HOME_PAGE,
+      {
+        headers: {
+          "Content-Type":
+            "text/html; charset=UTF-8",
+
+          ...corsHeaders()
+        }
       }
-    });
+    );
   }
 };
 
 // =========================
 // JSON RESPONSE
 // =========================
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      ...corsHeaders()
+function json(
+  data,
+  status = 200
+) {
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        ...corsHeaders()
+      }
     }
-  });
+  );
 }
 
 // =========================
@@ -228,8 +256,12 @@ function json(data, status = 200) {
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+
+    "Access-Control-Allow-Methods":
+      "GET, POST, OPTIONS",
+
+    "Access-Control-Allow-Headers":
+      "Content-Type"
   };
 }
 
@@ -238,7 +270,9 @@ function corsHeaders() {
 // =========================
 const HOME_PAGE = `<!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -249,118 +283,231 @@ const HOME_PAGE = `<!DOCTYPE html>
   <title>KARA AI</title>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b0f19;
-      color: white;
-      min-height: 100vh;
+
+      font-family:
+        Arial,
+        sans-serif;
+
+      background:
+        #0b0f19;
+
+      color:
+        white;
+
+      min-height:
+        100vh;
     }
 
     header {
-      padding: 18px;
-      text-align: center;
-      font-size: 26px;
-      font-weight: bold;
-      border-bottom: 1px solid #202737;
+      padding:
+        18px;
+
+      text-align:
+        center;
+
+      font-size:
+        26px;
+
+      font-weight:
+        bold;
+
+      border-bottom:
+        1px solid #202737;
     }
 
     .container {
-      max-width: 800px;
-      margin: auto;
-      padding: 20px;
+      max-width:
+        800px;
+
+      margin:
+        auto;
+
+      padding:
+        20px;
     }
 
     #welcome {
-      text-align: center;
-      margin-top: 70px;
+      text-align:
+        center;
+
+      margin-top:
+        70px;
     }
 
     #welcome h1 {
-      font-size: 42px;
-      margin-bottom: 10px;
+      font-size:
+        42px;
+
+      margin-bottom:
+        10px;
     }
 
     #welcome p {
-      color: #9ca3af;
+      color:
+        #9ca3af;
     }
 
     #chat {
-      margin-top: 30px;
-      padding-bottom: 100px;
+      margin-top:
+        30px;
+
+      padding-bottom:
+        100px;
     }
 
     .message {
-      padding: 14px 16px;
-      border-radius: 15px;
-      margin: 12px 0;
-      line-height: 1.5;
-      white-space: pre-wrap;
+      padding:
+        14px 16px;
+
+      border-radius:
+        15px;
+
+      margin:
+        12px 0;
+
+      line-height:
+        1.5;
+
+      white-space:
+        pre-wrap;
+
+      overflow-wrap:
+        anywhere;
     }
 
     .user {
-      background: #2563eb;
-      margin-left: 20%;
+      background:
+        #2563eb;
+
+      margin-left:
+        20%;
     }
 
     .ai {
-      background: #1f2937;
-      margin-right: 20%;
+      background:
+        #1f2937;
+
+      margin-right:
+        20%;
     }
 
     .input-area {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: #111827;
-      border-top: 1px solid #202737;
-      padding: 12px;
+      position:
+        fixed;
+
+      left:
+        0;
+
+      right:
+        0;
+
+      bottom:
+        0;
+
+      background:
+        #111827;
+
+      border-top:
+        1px solid #202737;
+
+      padding:
+        12px;
     }
 
     .input-box {
-      max-width: 800px;
-      margin: auto;
-      display: flex;
-      gap: 8px;
+      max-width:
+        800px;
+
+      margin:
+        auto;
+
+      display:
+        flex;
+
+      gap:
+        8px;
     }
 
     input {
-      flex: 1;
-      padding: 14px;
-      border-radius: 12px;
-      border: 1px solid #374151;
-      background: #0b0f19;
-      color: white;
-      outline: none;
+      flex:
+        1;
+
+      padding:
+        14px;
+
+      border-radius:
+        12px;
+
+      border:
+        1px solid #374151;
+
+      background:
+        #0b0f19;
+
+      color:
+        white;
+
+      outline:
+        none;
+
+      font-size:
+        16px;
     }
 
     button {
-      padding: 14px 18px;
-      border: none;
-      border-radius: 12px;
-      background: #2563eb;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
+      padding:
+        14px 18px;
+
+      border:
+        none;
+
+      border-radius:
+        12px;
+
+      background:
+        #2563eb;
+
+      color:
+        white;
+
+      font-weight:
+        bold;
+
+      cursor:
+        pointer;
     }
 
     button:hover {
-      opacity: 0.9;
+      opacity:
+        0.9;
     }
 
     .generated-image {
-      width: 100%;
-      max-width: 600px;
-      border-radius: 16px;
-      display: block;
-      margin-top: 8px;
+      width:
+        100%;
+
+      max-width:
+        600px;
+
+      border-radius:
+        16px;
+
+      display:
+        block;
+
+      margin-top:
+        8px;
     }
+
   </style>
+
 </head>
 
 <body>
@@ -372,8 +519,15 @@ const HOME_PAGE = `<!DOCTYPE html>
   <div class="container">
 
     <div id="welcome">
-      <h1>KARA AI</h1>
-      <p>Your friendly AI assistant</p>
+
+      <h1>
+        KARA AI
+      </h1>
+
+      <p>
+        Your friendly AI assistant
+      </p>
+
     </div>
 
     <div id="chat"></div>
@@ -381,6 +535,7 @@ const HOME_PAGE = `<!DOCTYPE html>
   </div>
 
   <div class="input-area">
+
     <div class="input-box">
 
       <input
@@ -390,28 +545,60 @@ const HOME_PAGE = `<!DOCTYPE html>
         autocomplete="off"
       >
 
-      <button onclick="sendMessage()">Send</button>
+      <button
+        onclick="sendMessage()"
+      >
+        Send
+      </button>
 
     </div>
+
   </div>
 
   <script>
-    const input = document.getElementById("message");
-    const chat = document.getElementById("chat");
 
-    input.addEventListener("keydown", function(event) {
-      if (event.key === "Enter") {
-        sendMessage();
+    const input =
+      document.getElementById(
+        "message"
+      );
+
+    const chat =
+      document.getElementById(
+        "chat"
+      );
+
+    input.addEventListener(
+      "keydown",
+      function(event) {
+
+        if (
+          event.key === "Enter"
+        ) {
+          sendMessage();
+        }
+
       }
-    });
+    );
 
-    function addMessage(text, type) {
-      const div = document.createElement("div");
+    function addMessage(
+      text,
+      type
+    ) {
 
-      div.className = "message " + type;
-      div.textContent = text;
+      const div =
+        document.createElement(
+          "div"
+        );
 
-      chat.appendChild(div);
+      div.className =
+        "message " + type;
+
+      div.textContent =
+        text;
+
+      chat.appendChild(
+        div
+      );
 
       window.scrollTo(
         0,
@@ -422,57 +609,101 @@ const HOME_PAGE = `<!DOCTYPE html>
     }
 
     async function sendMessage() {
-      const message = input.value.trim();
 
-      if (!message) return;
+      const message =
+        input.value.trim();
+
+      if (!message) {
+        return;
+      }
 
       input.value = "";
 
-      addMessage(message, "user");
+      addMessage(
+        message,
+        "user"
+      );
 
-      const lowerMessage = message.toLowerCase();
+      const lowerMessage =
+        message.toLowerCase();
 
       // =========================
       // IMAGE REQUEST DETECTION
       // =========================
-      const imageRequest =
-        lowerMessage.includes("generate an image") ||
-        lowerMessage.includes("create an image") ||
-        lowerMessage.includes("make an image") ||
-        lowerMessage.includes("generate image") ||
-        lowerMessage.includes("create image") ||
-        lowerMessage.includes("draw an image") ||
-        lowerMessage.includes("image of");
 
-      const loading = addMessage(
-        imageRequest
-          ? "KARA AI is generating your image..."
-          : "KARA AI is thinking...",
-        "ai"
-      );
+      const imageRequest =
+
+        lowerMessage.includes(
+          "generate an image"
+        ) ||
+
+        lowerMessage.includes(
+          "create an image"
+        ) ||
+
+        lowerMessage.includes(
+          "make an image"
+        ) ||
+
+        lowerMessage.includes(
+          "generate image"
+        ) ||
+
+        lowerMessage.includes(
+          "create image"
+        ) ||
+
+        lowerMessage.includes(
+          "draw an image"
+        ) ||
+
+        lowerMessage.includes(
+          "image of"
+        );
+
+      const loading =
+        addMessage(
+
+          imageRequest
+            ? "KARA AI is generating your image..."
+            : "KARA AI is thinking...",
+
+          "ai"
+        );
 
       try {
 
         // =========================
         // IMAGE GENERATION
         // =========================
+
         if (imageRequest) {
 
-          const response = await fetch("/api/image", {
-            method: "POST",
+          const response =
+            await fetch(
+              "/api/image",
+              {
+                method:
+                  "POST",
 
-            headers: {
-              "Content-Type": "application/json"
-            },
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
 
-            body: JSON.stringify({
-              prompt: message
-            })
-          });
+                body:
+                  JSON.stringify({
+                    prompt:
+                      message
+                  })
+              }
+            );
 
-          const data = await response.json();
+          const data =
+            await response.json();
 
           if (!response.ok) {
+
             loading.textContent =
               data.error ||
               "Image generation failed.";
@@ -481,18 +712,23 @@ const HOME_PAGE = `<!DOCTYPE html>
           }
 
           if (!data.image) {
+
             loading.textContent =
               "KARA AI did not return an image.";
 
             return;
           }
 
-          loading.textContent = "";
+          loading.textContent =
+            "";
 
           const image =
-            document.createElement("img");
+            document.createElement(
+              "img"
+            );
 
-          image.src = data.image;
+          image.src =
+            data.image;
 
           image.alt =
             "Generated by KARA AI";
@@ -500,7 +736,9 @@ const HOME_PAGE = `<!DOCTYPE html>
           image.className =
             "generated-image";
 
-          loading.appendChild(image);
+          loading.appendChild(
+            image
+          );
 
           window.scrollTo(
             0,
@@ -513,21 +751,32 @@ const HOME_PAGE = `<!DOCTYPE html>
         // =========================
         // NORMAL CHAT
         // =========================
-        const response = await fetch("/api/chat", {
-          method: "POST",
 
-          headers: {
-            "Content-Type": "application/json"
-          },
+        const response =
+          await fetch(
+            "/api/chat",
+            {
+              method:
+                "POST",
 
-          body: JSON.stringify({
-            message
-          })
-        });
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
 
-        const data = await response.json();
+              body:
+                JSON.stringify({
+                  message:
+                    message
+                })
+            }
+          );
+
+        const data =
+          await response.json();
 
         if (!response.ok) {
+
           loading.textContent =
             data.error ||
             "Something went wrong.";
@@ -543,10 +792,13 @@ const HOME_PAGE = `<!DOCTYPE html>
 
         loading.textContent =
           "Connection error. Please try again.";
+
       }
+
     }
+
   </script>
 
 </body>
+
 </html>`;
-  
