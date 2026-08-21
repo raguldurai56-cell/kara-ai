@@ -104,7 +104,77 @@ export default {
     });
   }
 };
+// KARA AI IMAGE GENERATION
+if (url.pathname === "/api/image" && request.method === "POST") {
+  try {
+    const body = await request.json();
+    const prompt = String(body.prompt || "").trim();
 
+    if (!prompt) {
+      return json({ error: "Image prompt empty." }, 400);
+    }
+
+    if (!env.GEMINI_API_KEY) {
+      return json({ error: "KARA AI API key is not configured." }, 500);
+    }
+
+    const endpoint =
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent";
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseModalities: ["IMAGE"]
+        }
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return json({
+        error: data?.error?.message || "Image generation failed."
+      }, response.status);
+    }
+
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+
+    const imagePart = parts.find(
+      part => part.inlineData?.data
+    );
+
+    if (!imagePart) {
+      return json({
+        error: "KARA AI did not return an image."
+      }, 500);
+    }
+
+    return json({
+      image: imagePart.inlineData.data,
+      mimeType: imagePart.inlineData.mimeType || "image/png"
+    });
+
+  } catch (error) {
+    return json({
+      error: "KARA AI image server error.",
+      details: error.message
+    }, 500);
+  }
+}
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
