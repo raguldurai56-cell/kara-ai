@@ -1,4 +1,4 @@
-const CHAT_MODEL = "gemini-3.6-flash";
+const MODEL = "gemini-3.6-flash";
 
 export default {
   async fetch(request, env) {
@@ -19,10 +19,7 @@ export default {
     if (url.pathname === "/api/chat" && request.method === "POST") {
       try {
         const body = await request.json();
-
-        const message = String(
-          body?.message || ""
-        ).trim();
+        const message = String(body.message || "").trim();
 
         if (!message) {
           return json(
@@ -31,22 +28,16 @@ export default {
           );
         }
 
-        // Check API key
         if (!env.GEMINI_API_KEY) {
           return json(
-            {
-              error:
-                "KARA AI API key is not configured."
-            },
+            { error: "KARA AI API key is not configured." },
             500
           );
         }
 
-        // Gemini API endpoint
         const endpoint =
-          `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+          `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
-        // Gemini request
         const response = await fetch(endpoint, {
           method: "POST",
 
@@ -60,14 +51,11 @@ export default {
                 {
                   text:
                     "You are KARA AI, a helpful, friendly AI assistant. " +
-                    "Your name is KARA AI. " +
-                    "Do not claim to be ChatGPT. " +
-                    "Answer clearly, naturally and accurately. " +
-                    "If the user speaks Tamil, reply in Tamil. " +
-                    "If the user speaks Tanglish, reply in Tanglish. " +
+                    "Answer clearly and naturally. " +
+                    "If the user speaks Tamil or Tanglish, reply in the same style. " +
                     "Talk like a close friendly Tamil friend when appropriate. " +
-                    "Keep answers useful and easy to understand. " +
-                    "For mathematical calculations, carefully calculate the answer before replying."
+                    "Do not claim to be ChatGPT. " +
+                    "Your name is KARA AI."
                 }
               ]
             },
@@ -88,36 +76,27 @@ export default {
 
         const data = await response.json();
 
-        // =========================
-        // GEMINI API ERROR
-        // =========================
         if (!response.ok) {
-          const apiError =
-            data?.error?.message ||
-            "Gemini API request failed.";
-
           return json(
             {
-              error: apiError
+              error:
+                data?.error?.message ||
+                "Gemini API request failed."
             },
             response.status
           );
         }
 
-        // =========================
-        // GET AI RESPONSE
-        // =========================
         const reply =
           data?.candidates?.[0]?.content?.parts
-            ?.map(part => part?.text || "")
+            ?.map(part => part.text || "")
             .join("")
             .trim();
 
         if (!reply) {
           return json(
             {
-              error:
-                "KARA AI did not return a response."
+              error: "KARA AI did not return a response."
             },
             500
           );
@@ -131,9 +110,7 @@ export default {
         return json(
           {
             error: "KARA AI server error.",
-            details:
-              error?.message ||
-              String(error)
+            details: error?.message || String(error)
           },
           500
         );
@@ -141,45 +118,21 @@ export default {
     }
 
     // =========================
-    // IMAGE API DISABLED
+    // KARA AI HOMEPAGE
     // =========================
-    // Image generation is intentionally disabled
-    // because the Gemini image model does not have
-    // Gemini API Free Tier availability.
-
-    if (
-      url.pathname === "/api/image" &&
-      request.method === "POST"
-    ) {
-      return json(
-        {
-          error:
-            "Image generation is currently disabled in the ₹0 version of KARA AI."
-        },
-        403
-      );
-    }
-
-    // =========================
-    // HOMEPAGE
-    // =========================
-    return new Response(
-      HOME_PAGE,
-      {
-        headers: {
-          "Content-Type":
-            "text/html; charset=UTF-8",
-          ...corsHeaders()
-        }
+    return new Response(HOME_PAGE, {
+      headers: {
+        "Content-Type": "text/html; charset=UTF-8",
+        ...corsHeaders()
       }
-    );
+    });
   }
 };
+
 
 // =========================
 // JSON RESPONSE
 // =========================
-
 function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
@@ -187,36 +140,30 @@ function json(data, status = 200) {
       status: status,
 
       headers: {
-        "Content-Type":
-          "application/json",
+        "Content-Type": "application/json",
         ...corsHeaders()
       }
     }
   );
 }
 
+
 // =========================
 // CORS HEADERS
 // =========================
-
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-
-    "Access-Control-Allow-Methods":
-      "GET, POST, OPTIONS",
-
-    "Access-Control-Allow-Headers":
-      "Content-Type"
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type"
   };
 }
+
 
 // =========================
 // KARA AI HOMEPAGE
 // =========================
-
 const HOME_PAGE = `<!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -234,10 +181,6 @@ const HOME_PAGE = `<!DOCTYPE html>
 
     * {
       box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
     }
 
     body {
@@ -274,7 +217,7 @@ const HOME_PAGE = `<!DOCTYPE html>
 
     #welcome p {
       color: #9ca3af;
-      font-size: 20px;
+      font-size: 18px;
     }
 
     #chat {
@@ -286,7 +229,7 @@ const HOME_PAGE = `<!DOCTYPE html>
       padding: 14px 16px;
       border-radius: 15px;
       margin: 12px 0;
-      line-height: 1.6;
+      line-height: 1.5;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
@@ -297,16 +240,16 @@ const HOME_PAGE = `<!DOCTYPE html>
     }
 
     .ai {
-      background: #1f2937;
+      background: #182033;
       margin-right: 20%;
     }
 
     .input-area {
       position: fixed;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
-      background: #111827;
+      background: #0b0f19;
       border-top: 1px solid #202737;
       padding: 12px;
     }
@@ -315,53 +258,40 @@ const HOME_PAGE = `<!DOCTYPE html>
       max-width: 800px;
       margin: auto;
       display: flex;
-      gap: 8px;
+      gap: 10px;
     }
 
     input {
       flex: 1;
-      padding: 14px;
+      padding: 15px;
       border-radius: 12px;
       border: 1px solid #374151;
-      background: #0b0f19;
+      background: #111827;
       color: white;
       outline: none;
       font-size: 16px;
     }
 
-    input::placeholder {
-      color: #6b7280;
+    input:disabled {
+      opacity: 0.6;
     }
 
     button {
-      padding: 14px 18px;
+      padding: 15px 20px;
       border: none;
       border-radius: 12px;
       background: #2563eb;
       color: white;
       font-weight: bold;
       cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      opacity: 0.9;
     }
 
     button:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
     }
 
     @media (max-width: 600px) {
-
-      #welcome {
-        margin-top: 50px;
-      }
-
-      #welcome h1 {
-        font-size: 38px;
-      }
 
       .user {
         margin-left: 5%;
@@ -371,16 +301,16 @@ const HOME_PAGE = `<!DOCTYPE html>
         margin-right: 5%;
       }
 
+      #welcome h1 {
+        font-size: 36px;
+      }
+
       .input-box {
         gap: 6px;
       }
 
-      input {
-        min-width: 0;
-      }
-
       button {
-        padding: 14px;
+        padding: 15px 16px;
       }
     }
 
@@ -388,27 +318,33 @@ const HOME_PAGE = `<!DOCTYPE html>
 
 </head>
 
+
 <body>
 
   <header>
-    KARA AI
+    🤖 KARA AI
   </header>
+
 
   <div class="container">
 
     <div id="welcome">
 
-      <h1>KARA AI</h1>
+      <h1>
+        Hi, I'm KARA 👋
+      </h1>
 
       <p>
-        Your friendly AI assistant
+        Your AI assistant.
       </p>
 
     </div>
 
+
     <div id="chat"></div>
 
   </div>
+
 
   <div class="input-area">
 
@@ -417,14 +353,11 @@ const HOME_PAGE = `<!DOCTYPE html>
       <input
         id="message"
         type="text"
-        placeholder="Message KARA AI..."
+        placeholder="Message KARA..."
         autocomplete="off"
-      >
+      />
 
-      <button
-        id="sendButton"
-        onclick="sendMessage()"
-      >
+      <button id="send">
         Send
       </button>
 
@@ -432,37 +365,25 @@ const HOME_PAGE = `<!DOCTYPE html>
 
   </div>
 
+
   <script>
 
     const input =
       document.getElementById("message");
 
+    const send =
+      document.getElementById("send");
+
     const chat =
       document.getElementById("chat");
 
-    const sendButton =
-      document.getElementById("sendButton");
+    const welcome =
+      document.getElementById("welcome");
 
-    // =========================
-    // ENTER KEY
-    // =========================
-
-    input.addEventListener(
-      "keydown",
-      function(event) {
-
-        if (event.key === "Enter") {
-          event.preventDefault();
-          sendMessage();
-        }
-
-      }
-    );
 
     // =========================
     // ADD MESSAGE
     // =========================
-
     function addMessage(text, type) {
 
       const div =
@@ -475,18 +396,18 @@ const HOME_PAGE = `<!DOCTYPE html>
 
       chat.appendChild(div);
 
-      window.scrollTo(
-        0,
-        document.body.scrollHeight
-      );
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+      });
 
       return div;
     }
 
+
     // =========================
     // SEND MESSAGE
     // =========================
-
     async function sendMessage() {
 
       const message =
@@ -496,20 +417,26 @@ const HOME_PAGE = `<!DOCTYPE html>
         return;
       }
 
-      input.value = "";
 
-      sendButton.disabled = true;
+      welcome.style.display = "none";
 
       addMessage(
         message,
         "user"
       );
 
-      const loading =
+      input.value = "";
+
+      send.disabled = true;
+      input.disabled = true;
+
+
+      const thinking =
         addMessage(
-          "KARA AI is thinking...",
+          "KARA is thinking...",
           "ai"
         );
+
 
       try {
 
@@ -530,38 +457,69 @@ const HOME_PAGE = `<!DOCTYPE html>
             }
           );
 
+
         const data =
           await response.json();
 
+
         if (!response.ok) {
 
-          loading.textContent =
-            data?.error ||
-            "Something went wrong.";
+          thinking.textContent =
+            "⚠️ " +
+            (
+              data.error ||
+              "Something went wrong."
+            );
 
           return;
         }
 
-        loading.textContent =
-          data?.reply ||
-          "KARA AI did not return a response.";
+
+        thinking.textContent =
+          data.reply ||
+          "No response.";
+
 
       } catch (error) {
 
-        loading.textContent =
-          "Connection error. Please try again.";
+        thinking.textContent =
+          "⚠️ Connection error. Please try again.";
 
       } finally {
 
-        sendButton.disabled = false;
-
+        send.disabled = false;
+        input.disabled = false;
         input.focus();
 
       }
     }
 
+
+    // =========================
+    // SEND BUTTON
+    // =========================
+    send.addEventListener(
+      "click",
+      sendMessage
+    );
+
+
+    // =========================
+    // ENTER KEY
+    // =========================
+    input.addEventListener(
+      "keydown",
+      function(event) {
+
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+
+      }
+    );
+
   </script>
 
 </body>
 
-</html>`;
+</html>`
