@@ -164,6 +164,7 @@ function corsHeaders() {
 // KARA AI HOMEPAGE
 // =========================
 const HOME_PAGE = `<!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -172,126 +173,330 @@ const HOME_PAGE = `<!DOCTYPE html>
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   >
 
   <title>KARA AI</title>
 
   <style>
 
+    /* =========================
+       GLOBAL
+       ========================= */
+
     * {
       box-sizing: border-box;
     }
 
+    html {
+      background: #0b0f19;
+    }
+
     body {
       margin: 0;
+      padding: 0;
+
       font-family: Arial, sans-serif;
+
       background: #0b0f19;
       color: white;
+
       min-height: 100vh;
+
+      overflow-x: hidden;
     }
+
+
+    /* =========================
+       HEADER
+       ========================= */
 
     header {
       padding: 18px;
+
       text-align: center;
+
       font-size: 26px;
       font-weight: bold;
+
       border-bottom: 1px solid #202737;
+
+      background: #0b0f19;
     }
 
+
+    /* =========================
+       MAIN CONTAINER
+       ========================= */
+
     .container {
+      width: 100%;
       max-width: 800px;
+
       margin: auto;
+
       padding: 20px;
+
+      padding-bottom: 120px;
     }
+
+
+    /* =========================
+       WELCOME
+       ========================= */
 
     #welcome {
       text-align: center;
+
       margin-top: 70px;
     }
 
     #welcome h1 {
       font-size: 42px;
+
       margin-bottom: 10px;
     }
 
     #welcome p {
       color: #9ca3af;
+
       font-size: 18px;
     }
 
+
+    /* =========================
+       CHAT
+       ========================= */
+
     #chat {
       margin-top: 30px;
+
       padding-bottom: 100px;
     }
 
+
+    /* =========================
+       MESSAGE
+       ========================= */
+
     .message {
       padding: 14px 16px;
+
       border-radius: 15px;
+
       margin: 12px 0;
+
       line-height: 1.5;
+
       white-space: pre-wrap;
+
       word-wrap: break-word;
+
+      overflow-wrap: anywhere;
     }
+
+
+    /* =========================
+       USER MESSAGE
+       ========================= */
 
     .user {
       background: #2563eb;
+
       margin-left: 20%;
     }
 
+
+    /* =========================
+       AI MESSAGE
+       ========================= */
+
     .ai {
       background: #182033;
+
       margin-right: 20%;
     }
 
+
+    /* =========================
+       INPUT AREA
+       ========================= */
+
     .input-area {
       position: fixed;
+
       bottom: 0;
       left: 0;
       right: 0;
+
       background: #0b0f19;
+
       border-top: 1px solid #202737;
+
       padding: 12px;
+
+      padding-bottom:
+        calc(12px + env(safe-area-inset-bottom));
+
+      z-index: 999;
     }
 
+
+    /* =========================
+       INPUT BOX
+       ========================= */
+
     .input-box {
+      width: 100%;
+
       max-width: 800px;
+
       margin: auto;
+
       display: flex;
+
       gap: 10px;
+
+      align-items: center;
     }
+
+
+    /* =========================
+       TEXT INPUT
+       IMPORTANT MOBILE FIX
+       ========================= */
 
     input {
       flex: 1;
+
+      min-width: 0;
+
+      width: 100%;
+
       padding: 15px;
+
       border-radius: 12px;
+
       border: 1px solid #374151;
+
       background: #111827;
-      color: white;
+
+      color: #ffffff !important;
+
+      -webkit-text-fill-color: #ffffff !important;
+
+      caret-color: #ffffff;
+
       outline: none;
+
+      font-size: 16px;
+
+      font-family: Arial, sans-serif;
+
+      opacity: 1 !important;
+
+      appearance: none;
+
+      -webkit-appearance: none;
+
+      box-shadow: none;
+    }
+
+
+    /* =========================
+       INPUT FOCUS
+       ========================= */
+
+    input:focus {
+      color: #ffffff !important;
+
+      -webkit-text-fill-color: #ffffff !important;
+
+      border-color: #2563eb;
+
+      outline: none;
+    }
+
+
+    /* =========================
+       PLACEHOLDER
+       ========================= */
+
+    input::placeholder {
+      color: #9ca3af !important;
+
+      -webkit-text-fill-color: #9ca3af !important;
+
+      opacity: 1 !important;
+    }
+
+
+    /* =========================
+       DISABLED INPUT
+       ========================= */
+
+    input:disabled {
+      color: #ffffff !important;
+
+      -webkit-text-fill-color: #ffffff !important;
+
+      opacity: 0.7 !important;
+    }
+
+
+    /* =========================
+       SEND BUTTON
+       ========================= */
+
+    button {
+      flex-shrink: 0;
+
+      padding: 15px 20px;
+
+      border: none;
+
+      border-radius: 12px;
+
+      background: #2563eb;
+
+      color: white;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
       font-size: 16px;
     }
 
-    input:disabled {
-      opacity: 0.6;
-    }
 
-    button {
-      padding: 15px 20px;
-      border: none;
-      border-radius: 12px;
-      background: #2563eb;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    /* =========================
+       BUTTON DISABLED
+       ========================= */
 
     button:disabled {
       opacity: 0.5;
+
       cursor: not-allowed;
     }
 
+
+    /* =========================
+       MOBILE
+       ========================= */
+
     @media (max-width: 600px) {
+
+      header {
+        font-size: 24px;
+
+        padding: 17px;
+      }
+
+      .container {
+        padding: 15px;
+
+        padding-bottom: 120px;
+      }
 
       .user {
         margin-left: 5%;
@@ -301,17 +506,52 @@ const HOME_PAGE = `<!DOCTYPE html>
         margin-right: 5%;
       }
 
+      #welcome {
+        margin-top: 60px;
+      }
+
       #welcome h1 {
-        font-size: 36px;
+        font-size: 34px;
+      }
+
+      #welcome p {
+        font-size: 17px;
       }
 
       .input-box {
-        gap: 6px;
+        gap: 7px;
+      }
+
+      input {
+        font-size: 16px;
+
+        padding: 15px 13px;
       }
 
       button {
         padding: 15px 16px;
       }
+    }
+
+
+    /* =========================
+       VERY SMALL SCREEN
+       ========================= */
+
+    @media (max-width: 380px) {
+
+      .input-box {
+        gap: 5px;
+      }
+
+      input {
+        padding: 14px 10px;
+      }
+
+      button {
+        padding: 14px 12px;
+      }
+
     }
 
   </style>
@@ -321,12 +561,24 @@ const HOME_PAGE = `<!DOCTYPE html>
 
 <body>
 
+
+  <!-- =========================
+       HEADER
+       ========================= -->
+
   <header>
     🤖 KARA AI
   </header>
 
 
+  <!-- =========================
+       MAIN
+       ========================= -->
+
   <div class="container">
+
+
+    <!-- WELCOME -->
 
     <div id="welcome">
 
@@ -341,25 +593,40 @@ const HOME_PAGE = `<!DOCTYPE html>
     </div>
 
 
+    <!-- CHAT -->
+
     <div id="chat"></div>
+
 
   </div>
 
 
+  <!-- =========================
+       INPUT AREA
+       ========================= -->
+
   <div class="input-area">
 
     <div class="input-box">
+
 
       <input
         id="message"
         type="text"
         placeholder="Message KARA..."
         autocomplete="off"
+        autocapitalize="sentences"
+        spellcheck="true"
       />
 
-      <button id="send">
+
+      <button
+        id="send"
+        type="button"
+      >
         Send
       </button>
+
 
     </div>
 
@@ -367,6 +634,10 @@ const HOME_PAGE = `<!DOCTYPE html>
 
 
   <script>
+
+    // =========================
+    // ELEMENTS
+    // =========================
 
     const input =
       document.getElementById("message");
@@ -384,6 +655,7 @@ const HOME_PAGE = `<!DOCTYPE html>
     // =========================
     // ADD MESSAGE
     // =========================
+
     function addMessage(text, type) {
 
       const div =
@@ -396,10 +668,18 @@ const HOME_PAGE = `<!DOCTYPE html>
 
       chat.appendChild(div);
 
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth"
-      });
+
+      // Scroll to bottom
+
+      setTimeout(() => {
+
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: "smooth"
+        });
+
+      }, 50);
+
 
       return div;
     }
@@ -408,28 +688,47 @@ const HOME_PAGE = `<!DOCTYPE html>
     // =========================
     // SEND MESSAGE
     // =========================
+
     async function sendMessage() {
 
       const message =
         input.value.trim();
+
+
+      // Empty message
 
       if (!message) {
         return;
       }
 
 
+      // Hide welcome
+
       welcome.style.display = "none";
+
+
+      // Add user message
 
       addMessage(
         message,
         "user"
       );
 
+
+      // Clear input
+
       input.value = "";
 
-      send.disabled = true;
-      input.disabled = true;
 
+      // Disable only SEND button
+      // IMPORTANT:
+      // Input is NOT disabled.
+      // This avoids mobile text visibility issues.
+
+      send.disabled = true;
+
+
+      // Thinking message
 
       const thinking =
         addMessage(
@@ -439,6 +738,10 @@ const HOME_PAGE = `<!DOCTYPE html>
 
 
       try {
+
+        // =========================
+        // API REQUEST
+        // =========================
 
         const response =
           await fetch(
@@ -458,9 +761,17 @@ const HOME_PAGE = `<!DOCTYPE html>
           );
 
 
+        // =========================
+        // READ RESPONSE
+        // =========================
+
         const data =
           await response.json();
 
+
+        // =========================
+        // ERROR
+        // =========================
 
         if (!response.ok) {
 
@@ -475,6 +786,10 @@ const HOME_PAGE = `<!DOCTYPE html>
         }
 
 
+        // =========================
+        // AI RESPONSE
+        // =========================
+
         thinking.textContent =
           data.reply ||
           "No response.";
@@ -482,22 +797,32 @@ const HOME_PAGE = `<!DOCTYPE html>
 
       } catch (error) {
 
+        // =========================
+        // CONNECTION ERROR
+        // =========================
+
         thinking.textContent =
           "⚠️ Connection error. Please try again.";
 
       } finally {
 
+        // Enable SEND button
+
         send.disabled = false;
-        input.disabled = false;
+
+        // Keep input active
+
         input.focus();
 
       }
+
     }
 
 
     // =========================
     // SEND BUTTON
     // =========================
+
     send.addEventListener(
       "click",
       sendMessage
@@ -507,18 +832,41 @@ const HOME_PAGE = `<!DOCTYPE html>
     // =========================
     // ENTER KEY
     // =========================
+
     input.addEventListener(
       "keydown",
       function(event) {
 
         if (event.key === "Enter") {
+
+          event.preventDefault();
+
           sendMessage();
+
         }
 
       }
     );
 
+
+    // =========================
+    // KEEP INPUT READY
+    // =========================
+
+    input.addEventListener(
+      "focus",
+      function() {
+
+        input.style.color = "#ffffff";
+
+        input.style.webkitTextFillColor =
+          "#ffffff";
+
+      }
+    );
+
   </script>
+
 
 </body>
 
