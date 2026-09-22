@@ -100,7 +100,9 @@ async function streamChat(message, env) {
               "If the user speaks Tamil or Tanglish, reply in the same style. " +
               "Talk like a close friendly Tamil friend when appropriate. " +
               "Do not claim to be ChatGPT. " +
-              "Your name is KARA AI."
+              "Your name is KARA AI. " +
+              "If the user asks who created you, who is your creator, who made you, or similar, " +
+              "reply that you were created by D.Ragul s/o Duraikannan."
           }
         ]
       },
@@ -364,8 +366,11 @@ const HOME_PAGE = `<!DOCTYPE html>
     const imageModeBtn = document.getElementById("imageMode");
 
     let imageMode = false;
+    let currentController = null;
+    let isGenerating = false;
 
     imageModeBtn.addEventListener("click", function () {
+      if (isGenerating) return;
       imageMode = !imageMode;
       imageModeBtn.classList.toggle("active", imageMode);
       input.placeholder = imageMode ? "Describe the image to generate..." : "Message KARA...";
@@ -382,26 +387,40 @@ const HOME_PAGE = `<!DOCTYPE html>
       return div;
     }
 
+    function setGeneratingState(active) {
+      isGenerating = active;
+      send.textContent = active ? "Stop" : "Send";
+      imageModeBtn.disabled = active;
+    }
+
     async function sendMessage() {
+      if (isGenerating) {
+        if (currentController) currentController.abort();
+        return;
+      }
+
       const message = input.value.trim();
       if (!message) return;
 
       welcome.style.display = "none";
       addMessage(message, "user");
       input.value = "";
-      send.disabled = true;
+
+      currentController = new AbortController();
+      setGeneratingState(true);
 
       if (imageMode) {
-        await handleImageRequest(message);
+        await handleImageRequest(message, currentController.signal);
       } else {
-        await handleChatRequest(message);
+        await handleChatRequest(message, currentController.signal);
       }
 
-      send.disabled = false;
+      setGeneratingState(false);
+      currentController = null;
       input.focus();
     }
 
-    async function handleChatRequest(message) {
+    async function handleChatRequest(message, signal) {
       const thinking = addMessage("KARA is thinking...", "ai");
       let fullText = "";
       let started = false;
@@ -410,7 +429,8 @@ const HOME_PAGE = `<!DOCTYPE html>
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: message })
+          body: JSON.stringify({ message: message }),
+          signal: signal
         });
 
         if (!response.ok) {
@@ -446,56 +466,90 @@ const HOME_PAGE = `<!DOCTYPE html>
         }
 
       } catch (error) {
-        thinking.textContent = "⚠️ Connection error. Please try again.";
+        if (error.name === "AbortError") {
+          thinking.textContent = fullText ? fullText + "\\n\\n⏹️ Stopped." : "⏹️ Stopped.";
+        } else {
+          thinking.textContent = "⚠️ Connection error. Please try again.";
+        }
       }
     }
 
-    async function handleImageRequest(message) {
+    async function handleImageRequest(message, signal) {
       const thinking = addMessage("KARA is preparing the idea...", "ai");
 
       try {
-        // Step 1: expand the short prompt into a detailed one using Gemini
         let finalPrompt = message;
         try {
           const enhanceRes = await fetch("/api/enhance-image-prompt", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: message })
+            body: JSON.stringify({ message: message }),
+            signal: signal
           });
           if (enhanceRes.ok) {
             const enhanceData = await enhanceRes.json();
-            if (enhanceData.prompt) {
-              finalPrompt = enhanceData.prompt;
-            }
+            if (enhanceData.prompt) finalPrompt = enhanceData.prompt;
           }
         } catch (e) {
-          // if enhancement fails, just continue with the original short prompt
+          if (e.name === "AbortError") throw e;
         }
 
-        thinking.textContent = "KARA is generating the image...";
+        const maxAttempts = 3;
+        let lastError = null;
+        let loadedUrl = null;
 
-        const seed = Math.floor(Math.random() * 1000000);
-        const imageUrl =
-          "https://image.pollinations.ai/prompt/" +
-          encodeURIComponent(finalPrompt) +
-          "?width=1024&height=1024&seed=" + seed +
-          "&model=flux&nologo=true";
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+
+          thinking.textContent = attempt === 1
+            ? "KARA is generating the image..."
+            : "KARA is retrying (" + attempt + "/" + maxAttempts + ")...";
+
+          const seed = Math.floor(Math.random() * 1000000);
+          const imageUrl =
+            "https://image.pollinations.ai/prompt/" +
+            encodeURIComponent(finalPrompt) +
+            "?width=1024&height=1024&seed=" + seed +
+            "&model=flux&nologo=true";
+
+          try {
+            await new Promise((resolve, reject) => {
+              const testImg = new Image();
+              const onAbort = () => reject(new DOMException("Aborted", "AbortError"));
+              signal.addEventListener("abort", onAbort, { once: true });
+              testImg.onload = () => {
+                signal.removeEventListener("abort", onAbort);
+                resolve();
+              };
+              testImg.onerror = () => {
+                signal.removeEventListener("abort", onAbort);
+                reject(new Error("Image load failed"));
+              };
+              testImg.src = imageUrl;
+            });
+            loadedUrl = imageUrl;
+            break;
+          } catch (err) {
+            if (err.name === "AbortError") throw err;
+            lastError = err;
+          }
+        }
+
+        if (!loadedUrl) throw lastError || new Error("Image generation failed");
 
         const img = document.createElement("img");
-
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = imageUrl;
-        });
-
+        img.src = loadedUrl;
         thinking.textContent = "";
         thinking.appendChild(img);
 
         window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 
       } catch (error) {
-        thinking.textContent = "⚠️ Image generation failed. Please try again.";
+        if (error.name === "AbortError") {
+          thinking.textContent = "⏹️ Stopped.";
+        } else {
+          thinking.textContent = "⚠️ Image generation failed after retries. Please try again.";
+        }
       }
     }
 
