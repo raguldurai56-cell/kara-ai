@@ -1,4 +1,4 @@
-const MODEL_TEXT = "gemini-3-flash-preview";
+const MODEL_TEXT = "llama-3.3-70b-versatile"; // Groq model — free, fast, no India geo-block
 // Image generation uses Pollinations.ai on the frontend (free, no API key needed) — see HOME_PAGE script below.
 
 export default {
@@ -26,7 +26,7 @@ export default {
           return json({ error: "Message empty." }, 400);
         }
 
-        if (!env.GEMINI_API_KEY) {
+        if (!env.GROQ_API_KEY) {
           return json({ error: "KARA AI API key is not configured." }, 500);
         }
 
@@ -52,7 +52,7 @@ export default {
           return json({ error: "Message empty." }, 400);
         }
 
-        if (!env.GEMINI_API_KEY) {
+        if (!env.GROQ_API_KEY) {
           return json({ error: "KARA AI API key is not configured." }, 500);
         }
 
@@ -84,44 +84,47 @@ export default {
 // STREAMING CHAT HANDLER
 // =========================
 async function streamChat(message, env) {
-  const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_TEXT}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`;
+  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
-  const geminiResponse = await fetch(endpoint, {
+  const groqResponse = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${env.GROQ_API_KEY}`
+    },
     body: JSON.stringify({
-      system_instruction: {
-        parts: [
-          {
-            text:
-              "You are KARA AI, a helpful, friendly AI assistant. " +
-              "Answer clearly and naturally. " +
-              "If the user speaks Tamil or Tanglish, reply in the same style. " +
-              "Talk like a close friendly Tamil friend when appropriate. " +
-              "Do not claim to be ChatGPT. " +
-              "Your name is KARA AI. " +
-              "If the user asks who created you, who is your creator, who made you, or similar, " +
-              "reply that you were created by D.Ragul s/o Duraikannan."
-          }
-        ]
-      },
-      contents: [
-        { role: "user", parts: [{ text: message }] }
+      model: MODEL_TEXT,
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are KARA AI, a helpful, friendly AI assistant. " +
+            "Answer clearly and naturally. " +
+            "If the user speaks Tamil or Tanglish, reply in the same style. " +
+            "Talk like a close friendly Tamil friend when appropriate. " +
+            "Do not claim to be ChatGPT. " +
+            "Your name is KARA AI. " +
+            "If the user asks who created you, who is your creator, who made you, or similar, " +
+            "reply that you were created by D.Ragul s/o Duraikannan."
+        },
+        { role: "user", content: message }
       ]
     })
   });
 
-  if (!geminiResponse.ok || !geminiResponse.body) {
-    let errMsg = "Gemini API request failed.";
+  if (!groqResponse.ok || !groqResponse.body) {
+    let errMsg = "Groq API request failed.";
     try {
-      const errData = await geminiResponse.json();
+      const errData = await groqResponse.json();
       errMsg = errData?.error?.message || errMsg;
     } catch (e) {}
-    return json({ error: errMsg }, geminiResponse.status || 500);
+    return json({ error: errMsg }, groqResponse.status || 500);
   }
 
-  const reader = geminiResponse.body.getReader();
+  const reader = groqResponse.body.getReader();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 
@@ -146,10 +149,7 @@ async function streamChat(message, env) {
 
             try {
               const parsed = JSON.parse(jsonStr);
-              const text =
-                parsed?.candidates?.[0]?.content?.parts
-                  ?.map(p => p.text || "")
-                  .join("") || "";
+              const text = parsed?.choices?.[0]?.delta?.content || "";
               if (text) controller.enqueue(encoder.encode(text));
             } catch (e) {
               // skip malformed chunk
@@ -176,37 +176,35 @@ async function streamChat(message, env) {
 // IMAGE PROMPT ENHANCER (uses Gemini text model)
 // =========================
 async function enhanceImagePrompt(shortPrompt, env) {
-  const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_TEXT}:generateContent?key=${env.GEMINI_API_KEY}`;
+  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${env.GROQ_API_KEY}`
+    },
     body: JSON.stringify({
-      system_instruction: {
-        parts: [
-          {
-            text:
-              "You turn a short, casual image idea into one vivid, detailed prompt " +
-              "for an AI image generator. Add subject details, setting, lighting, mood, " +
-              "and art style. Output ONLY the final prompt as one paragraph, in English, " +
-              "no explanations, no quotes, no extra text."
-          }
-        ]
-      },
-      contents: [
-        { role: "user", parts: [{ text: shortPrompt }] }
+      model: MODEL_TEXT,
+      temperature: 0.7,
+      max_tokens: 300,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You turn a short, casual image idea into one vivid, detailed prompt " +
+            "for an AI image generator. Add subject details, setting, lighting, mood, " +
+            "and art style. Output ONLY the final prompt as one paragraph, in English, " +
+            "no explanations, no quotes, no extra text."
+        },
+        { role: "user", content: shortPrompt }
       ]
     })
   });
 
   const data = await response.json();
 
-  const text =
-    data?.candidates?.[0]?.content?.parts
-      ?.map(p => p.text || "")
-      .join("")
-      .trim();
+  const text = data?.choices?.[0]?.message?.content?.trim();
 
   // Fall back to the original prompt if enhancement fails for any reason
   return text || shortPrompt;
