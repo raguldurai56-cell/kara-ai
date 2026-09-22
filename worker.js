@@ -1,5 +1,5 @@
 const MODEL_TEXT = "gemini-3-flash-preview";
-const MODEL_IMAGE = "gemini-3.1-flash-image";
+// Image generation uses Pollinations.ai on the frontend (free, no API key needed) — see HOME_PAGE script below.
 
 export default {
   async fetch(request, env) {
@@ -35,32 +35,6 @@ export default {
       } catch (error) {
         return json(
           { error: "KARA AI server error.", details: error?.message || String(error) },
-          500
-        );
-      }
-    }
-
-    // =========================
-    // KARA AI IMAGE GENERATION API
-    // =========================
-    if (url.pathname === "/api/image" && request.method === "POST") {
-      try {
-        const body = await request.json();
-        const prompt = String(body.message || "").trim();
-
-        if (!prompt) {
-          return json({ error: "Image prompt empty." }, 400);
-        }
-
-        if (!env.GEMINI_API_KEY) {
-          return json({ error: "KARA AI API key is not configured." }, 500);
-        }
-
-        return await generateImage(prompt, env);
-
-      } catch (error) {
-        return json(
-          { error: "KARA AI image server error.", details: error?.message || String(error) },
           500
         );
       }
@@ -166,47 +140,6 @@ async function streamChat(message, env) {
       ...corsHeaders()
     }
   });
-}
-
-
-// =========================
-// IMAGE GENERATION HANDLER
-// =========================
-async function generateImage(prompt, env) {
-  const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_IMAGE}:generateContent?key=${env.GEMINI_API_KEY}`;
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [
-        { role: "user", parts: [{ text: prompt }] }
-      ]
-    })
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    return json(
-      { error: data?.error?.message || "Image generation failed." },
-      response.status
-    );
-  }
-
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  const imgPart = parts.find(p => p.inlineData || p.inline_data);
-  const inline = imgPart?.inlineData || imgPart?.inline_data;
-
-  if (!inline) {
-    return json({ error: "KARA AI did not return an image." }, 500);
-  }
-
-  const mime = inline.mimeType || inline.mime_type || "image/png";
-  const b64 = inline.data;
-
-  return json({ image: `data:${mime};base64,${b64}` });
 }
 
 
@@ -453,28 +386,27 @@ const HOME_PAGE = `<!DOCTYPE html>
       const thinking = addMessage("KARA is generating the image...", "ai");
 
       try {
-        const response = await fetch("/api/image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: message })
+        const seed = Math.floor(Math.random() * 1000000);
+        const imageUrl =
+          "https://image.pollinations.ai/prompt/" +
+          encodeURIComponent(message) +
+          "?width=768&height=768&seed=" + seed + "&nologo=true";
+
+        const img = document.createElement("img");
+
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = imageUrl;
         });
 
-        const data = await response.json();
-
-        if (!response.ok || !data.image) {
-          thinking.textContent = "⚠️ " + (data.error || "Image generation failed.");
-          return;
-        }
-
         thinking.textContent = "";
-        const img = document.createElement("img");
-        img.src = data.image;
         thinking.appendChild(img);
 
         window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 
       } catch (error) {
-        thinking.textContent = "⚠️ Connection error. Please try again.";
+        thinking.textContent = "⚠️ Image generation failed. Please try again.";
       }
     }
 
