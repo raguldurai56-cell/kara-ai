@@ -41,6 +41,33 @@ export default {
     }
 
     // =========================
+    // KARA AI IMAGE PROMPT ENHANCER
+    // =========================
+    if (url.pathname === "/api/enhance-image-prompt" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const message = String(body.message || "").trim();
+
+        if (!message) {
+          return json({ error: "Message empty." }, 400);
+        }
+
+        if (!env.GEMINI_API_KEY) {
+          return json({ error: "KARA AI API key is not configured." }, 500);
+        }
+
+        const enhanced = await enhanceImagePrompt(message, env);
+        return json({ prompt: enhanced });
+
+      } catch (error) {
+        return json(
+          { error: "KARA AI server error.", details: error?.message || String(error) },
+          500
+        );
+      }
+    }
+
+    // =========================
     // KARA AI HOMEPAGE
     // =========================
     return new Response(HOME_PAGE, {
@@ -140,6 +167,47 @@ async function streamChat(message, env) {
       ...corsHeaders()
     }
   });
+}
+
+
+// =========================
+// IMAGE PROMPT ENHANCER (uses Gemini text model)
+// =========================
+async function enhanceImagePrompt(shortPrompt, env) {
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_TEXT}:generateContent?key=${env.GEMINI_API_KEY}`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [
+          {
+            text:
+              "You turn a short, casual image idea into one vivid, detailed prompt " +
+              "for an AI image generator. Add subject details, setting, lighting, mood, " +
+              "and art style. Output ONLY the final prompt as one paragraph, in English, " +
+              "no explanations, no quotes, no extra text."
+          }
+        ]
+      },
+      contents: [
+        { role: "user", parts: [{ text: shortPrompt }] }
+      ]
+    })
+  });
+
+  const data = await response.json();
+
+  const text =
+    data?.candidates?.[0]?.content?.parts
+      ?.map(p => p.text || "")
+      .join("")
+      .trim();
+
+  // Fall back to the original prompt if enhancement fails for any reason
+  return text || shortPrompt;
 }
 
 
@@ -383,14 +451,35 @@ const HOME_PAGE = `<!DOCTYPE html>
     }
 
     async function handleImageRequest(message) {
-      const thinking = addMessage("KARA is generating the image...", "ai");
+      const thinking = addMessage("KARA is preparing the idea...", "ai");
 
       try {
+        // Step 1: expand the short prompt into a detailed one using Gemini
+        let finalPrompt = message;
+        try {
+          const enhanceRes = await fetch("/api/enhance-image-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: message })
+          });
+          if (enhanceRes.ok) {
+            const enhanceData = await enhanceRes.json();
+            if (enhanceData.prompt) {
+              finalPrompt = enhanceData.prompt;
+            }
+          }
+        } catch (e) {
+          // if enhancement fails, just continue with the original short prompt
+        }
+
+        thinking.textContent = "KARA is generating the image...";
+
         const seed = Math.floor(Math.random() * 1000000);
         const imageUrl =
           "https://image.pollinations.ai/prompt/" +
-          encodeURIComponent(message) +
-          "?width=768&height=768&seed=" + seed + "&nologo=true";
+          encodeURIComponent(finalPrompt) +
+          "?width=1024&height=1024&seed=" + seed +
+          "&model=flux&nologo=true";
 
         const img = document.createElement("img");
 
