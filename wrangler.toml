@@ -3,4 +3,4 @@ main = "Worker.js"
 compatibility_date = "2026-08-20"
 
 [secrets]
-required = ["GEMINI_API_KEY"]
+required = ["GROQ_API_KEY"]
